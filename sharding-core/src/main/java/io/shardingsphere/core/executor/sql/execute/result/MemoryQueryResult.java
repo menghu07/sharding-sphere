@@ -69,6 +69,7 @@ public final class MemoryQueryResult implements QueryResult {
             }
             result.add(row);
         }
+        System.out.println("length: " + result.size());
         return result.iterator();
     }
     

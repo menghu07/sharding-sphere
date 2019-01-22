@@ -33,6 +33,11 @@ public final class SQLServerLexer extends Lexer {
     public SQLServerLexer(final String input) {
         super(input, dictionary);
     }
+
+    @Override
+    protected boolean isNoOrder() {
+        return '/' == getCurrentChar(0) && '*' == getCurrentChar(1) && '-' == getCurrentChar(2);
+    }
     
     @Override
     protected boolean isHintBegin() {

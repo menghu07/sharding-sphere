@@ -28,17 +28,7 @@ import io.shardingsphere.core.parsing.parser.context.limit.Limit;
 import io.shardingsphere.core.parsing.parser.sql.SQLStatement;
 import io.shardingsphere.core.parsing.parser.sql.dml.insert.InsertStatement;
 import io.shardingsphere.core.parsing.parser.sql.dql.select.SelectStatement;
-import io.shardingsphere.core.parsing.parser.token.IndexToken;
-import io.shardingsphere.core.parsing.parser.token.InsertColumnToken;
-import io.shardingsphere.core.parsing.parser.token.InsertValuesToken;
-import io.shardingsphere.core.parsing.parser.token.ItemsToken;
-import io.shardingsphere.core.parsing.parser.token.OffsetToken;
-import io.shardingsphere.core.parsing.parser.token.OrderByToken;
-import io.shardingsphere.core.parsing.parser.token.RemoveToken;
-import io.shardingsphere.core.parsing.parser.token.RowCountToken;
-import io.shardingsphere.core.parsing.parser.token.SQLToken;
-import io.shardingsphere.core.parsing.parser.token.SchemaToken;
-import io.shardingsphere.core.parsing.parser.token.TableToken;
+import io.shardingsphere.core.parsing.parser.token.*;
 import io.shardingsphere.core.rewrite.placeholder.IndexPlaceholder;
 import io.shardingsphere.core.rewrite.placeholder.InsertValuesPlaceholder;
 import io.shardingsphere.core.rewrite.placeholder.SchemaPlaceholder;
@@ -113,8 +103,17 @@ public final class SQLRewriteEngine {
             return result;
         }
         int count = 0;
+        int skips = 0;
         for (SQLToken each : sqlTokens) {
-            if (0 == count) {
+            //处理NoOrderToken
+            if (each instanceof NoOrderToken) {
+                //Tables按顺序查询
+                skips++;
+                count++;
+                //查询每个表
+                continue;
+            }
+            if (skips == count) {
                 result.appendLiterals(originalSQL.substring(0, each.getBeginPosition()));
             }
             if (each instanceof TableToken) {

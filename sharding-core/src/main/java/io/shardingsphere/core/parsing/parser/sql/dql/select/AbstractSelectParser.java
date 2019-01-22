@@ -22,9 +22,7 @@ import com.google.common.base.Preconditions;
 import io.shardingsphere.core.constant.AggregationType;
 import io.shardingsphere.core.metadata.table.ShardingTableMetaData;
 import io.shardingsphere.core.parsing.lexer.LexerEngine;
-import io.shardingsphere.core.parsing.lexer.token.Assist;
-import io.shardingsphere.core.parsing.lexer.token.DefaultKeyword;
-import io.shardingsphere.core.parsing.lexer.token.Symbol;
+import io.shardingsphere.core.parsing.lexer.token.*;
 import io.shardingsphere.core.parsing.parser.clause.facade.AbstractSelectClauseParserFacade;
 import io.shardingsphere.core.parsing.parser.constant.DerivedColumn;
 import io.shardingsphere.core.parsing.parser.context.OrderItem;
@@ -34,7 +32,9 @@ import io.shardingsphere.core.parsing.parser.context.selectitem.StarSelectItem;
 import io.shardingsphere.core.parsing.parser.context.table.Table;
 import io.shardingsphere.core.parsing.parser.sql.SQLParser;
 import io.shardingsphere.core.parsing.parser.token.ItemsToken;
+import io.shardingsphere.core.parsing.parser.token.NoOrderToken;
 import io.shardingsphere.core.parsing.parser.token.OrderByToken;
+import io.shardingsphere.core.parsing.parser.token.SQLToken;
 import io.shardingsphere.core.rule.ShardingRule;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -65,8 +65,27 @@ public abstract class AbstractSelectParser implements SQLParser {
     @Override
     public final SelectStatement parse() {
         SelectStatement result = parseInternal();
+        //hile 保留NoOrderToken
+        SQLToken noOrderToken = null;
+        for (SQLToken token : result.getSQLTokens()) {
+            if (token instanceof NoOrderToken) {
+                noOrderToken = token;
+            }
+        }
         if (result.containsSubQuery()) {
             result = result.mergeSubQueryStatement();
+        }
+        if (noOrderToken != null) {
+            boolean isRemoved = true;
+            for (SQLToken token : result.getSQLTokens()) {
+                if (token instanceof NoOrderToken) {
+                    isRemoved = false;
+                    break;
+                }
+            }
+            if (isRemoved) {
+                result.addSQLToken(noOrderToken);
+            }
         }
         // TODO move to rewrite
         appendDerivedColumns(result);
@@ -80,9 +99,21 @@ public abstract class AbstractSelectParser implements SQLParser {
         parseInternal(result);
         return result;
     }
-    
+
     protected abstract void parseInternal(SelectStatement selectStatement);
-    
+
+    /**
+     * 添加Select NoOrder Token
+     * @param selectStatement select语句
+     */
+    protected final void parseNoOrder(final SelectStatement selectStatement) {
+        if (lexerEngine.getCurrentToken().getType() == Literals.NOORDER) {
+            Token token = lexerEngine.getCurrentToken();
+            selectStatement.addSQLToken(new NoOrderToken(token.getEndPosition() - token.getLiterals().length()));
+            lexerEngine.nextToken();
+        }
+    }
+
     protected final void parseDistinct() {
         selectClauseParserFacade.getDistinctClauseParser().parse();
     }

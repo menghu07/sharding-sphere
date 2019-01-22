@@ -35,7 +35,7 @@ import lombok.RequiredArgsConstructor;
  */
 @RequiredArgsConstructor
 public final class SQLParsingEngine {
-    
+
     private final DatabaseType dbType;
     
     private final String sql;

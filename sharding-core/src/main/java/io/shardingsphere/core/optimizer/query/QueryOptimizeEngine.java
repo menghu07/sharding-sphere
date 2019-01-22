@@ -77,10 +77,10 @@ public final class QueryOptimizeEngine implements OptimizeEngine {
     }
     
     private ShardingValue optimize(final Column column, final List<Condition> conditions) {
-        List<Comparable<?>> listValue = null;
-        Range<Comparable<?>> rangeValue = null;
+        List<Comparable<String>> listValue = null;
+        Range<Comparable<String>> rangeValue = null;
         for (Condition each : conditions) {
-            List<Comparable<?>> conditionValues = each.getConditionValues(parameters);
+            List<Comparable<String>> conditionValues = getComparableStrings(each.getConditionValues(parameters));
             if (ShardingOperator.EQUAL == each.getOperator() || ShardingOperator.IN == each.getOperator()) {
                 listValue = optimize(conditionValues, listValue);
                 if (listValue.isEmpty()) {
@@ -89,7 +89,41 @@ public final class QueryOptimizeEngine implements OptimizeEngine {
             }
             if (ShardingOperator.BETWEEN == each.getOperator()) {
                 try {
-                    rangeValue = optimize(Range.range(conditionValues.get(0), BoundType.CLOSED, conditionValues.get(1), BoundType.CLOSED), rangeValue);
+                    Range<Comparable<String>> betweenRange = Range.range(conditionValues.get(0), BoundType.CLOSED, conditionValues.get(1), BoundType.CLOSED);
+                    rangeValue = optimize(betweenRange, rangeValue);
+                } catch (final IllegalArgumentException ex) {
+                    return new AlwaysFalseShardingValue();
+                }
+            }
+            //支持范围< <= > >=关系操作符字段分表
+            if (ShardingOperator.LT == each.getOperator()) {
+                try {
+                    Range<Comparable<String>> rightValue = Range.lessThan(conditionValues.get(0));
+                    rangeValue = optimize(rightValue, rangeValue);
+                } catch (final IllegalArgumentException ex) {
+                    return new AlwaysFalseShardingValue();
+                }
+            }
+            if (ShardingOperator.LT_EQ == each.getOperator()) {
+                try {
+                    Range<Comparable<String>> rightValue = Range.atMost(conditionValues.get(0));
+                    rangeValue = optimize(rightValue, rangeValue);
+                } catch (final IllegalArgumentException ex) {
+                    return new AlwaysFalseShardingValue();
+                }
+            }
+            if (ShardingOperator.GT == each.getOperator()) {
+                try {
+                    Range<Comparable<String>> rightValue = Range.greaterThan(conditionValues.get(0));
+                    rangeValue = optimize(rightValue, rangeValue);
+                } catch (final IllegalArgumentException ex) {
+                    return new AlwaysFalseShardingValue();
+                }
+            }
+            if (ShardingOperator.GT_EQ == each.getOperator()) {
+                try {
+                    Range<Comparable<String>> rightValue = Range.atLeast(conditionValues.get(0));
+                    rangeValue = optimize(rightValue, rangeValue);
                 } catch (final IllegalArgumentException ex) {
                     return new AlwaysFalseShardingValue();
                 }
@@ -105,7 +139,7 @@ public final class QueryOptimizeEngine implements OptimizeEngine {
         return listValue.isEmpty() ? new AlwaysFalseShardingValue() : new ListShardingValue<>(column.getTableName(), column.getName(), listValue);
     }
     
-    private List<Comparable<?>> optimize(final List<Comparable<?>> value1, final List<Comparable<?>> value2) {
+    private List<Comparable<String>> optimize(final List<Comparable<String>> value1, final List<Comparable<String>> value2) {
         if (null == value2) {
             return value1;
         }
@@ -113,17 +147,25 @@ public final class QueryOptimizeEngine implements OptimizeEngine {
         return value1;
     }
     
-    private Range<Comparable<?>> optimize(final Range<Comparable<?>> value1, final Range<Comparable<?>> value2) {
+    private Range<Comparable<String>> optimize(final Range<Comparable<String>> value1, final Range<Comparable<String>> value2) {
         return null == value2 ? value1 : value1.intersection(value2);
     }
     
-    private List<Comparable<?>> optimize(final List<Comparable<?>> listValue, final Range<Comparable<?>> rangeValue) {
-        List<Comparable<?>> result = new LinkedList<>();
-        for (Comparable<?> each : listValue) {
+    private List<Comparable<String>> optimize(final List<Comparable<String>> listValue, final Range<Comparable<String>> rangeValue) {
+        List<Comparable<String>> result = new LinkedList<>();
+        for (Comparable<String> each : listValue) {
             if (rangeValue.contains(each)) {
                 result.add(each);
             }
         }
         return result;
+    }
+
+    private List<Comparable<String>> getComparableStrings(List<Comparable<?>> comparableList) {
+        List<Comparable<String>> elements = new ArrayList<>();
+        for (Comparable<?> e : comparableList) {
+            elements.add((Comparable) e);
+        }
+        return elements;
     }
 }

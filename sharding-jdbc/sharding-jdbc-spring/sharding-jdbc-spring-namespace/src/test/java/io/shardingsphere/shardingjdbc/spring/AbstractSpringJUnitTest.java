@@ -71,6 +71,6 @@ public abstract class AbstractSpringJUnitTest extends AbstractJUnit4SpringContex
     }
     
     protected List<String> getSchemaFiles() {
-        return Arrays.asList("schema/dbtbl_0.sql", "schema/dbtbl_1.sql");
+        return Arrays.asList("config/schema/dbtbl_0.sql", "config/schema/dbtbl_1.sql");
     }
 }

@@ -24,5 +24,5 @@ package io.shardingsphere.core.parsing.lexer.token;
  */
 public enum Literals implements TokenType {
     
-    INT, FLOAT, HEX, CHARS, IDENTIFIER, VARIABLE
+    INT, FLOAT, HEX, CHARS, IDENTIFIER, VARIABLE, NOORDER
 }

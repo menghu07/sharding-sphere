@@ -36,7 +36,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.text.SimpleDateFormat;
 import java.util.Collection;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -111,9 +113,14 @@ public final class PreparedStatementExecutor extends AbstractStatementExecutor {
     
     private QueryResult getQueryResult(final StatementExecuteUnit statementExecuteUnit) throws SQLException {
         PreparedStatement preparedStatement = (PreparedStatement) statementExecuteUnit.getStatement();
+        long begin = System.currentTimeMillis();
         ResultSet resultSet = preparedStatement.executeQuery();
+        System.out.println(new SimpleDateFormat("yyyy-MM-dd hh:mm:ss.SSS").format(new Date()) + " " + statementExecuteUnit.getRouteUnit().getSqlUnit().getSql() + ", sql use time = " + (System.currentTimeMillis() - begin) / 1000.0 + "s");
         getResultSets().add(resultSet);
-        return ConnectionMode.MEMORY_STRICTLY == statementExecuteUnit.getConnectionMode() ? new StreamQueryResult(resultSet) : new MemoryQueryResult(resultSet);
+        long begin2 = System.currentTimeMillis();
+        QueryResult temp = ConnectionMode.MEMORY_STRICTLY == statementExecuteUnit.getConnectionMode() ? new StreamQueryResult(resultSet) : new MemoryQueryResult(resultSet);
+        System.out.println(new SimpleDateFormat("yyyy-MM-dd hh:mm:ss.SSS").format(new Date()) + "  assembly result, sql use time = " + (System.currentTimeMillis() - begin2) / 1000.0 + "s");
+        return temp;
     }
     
     /**

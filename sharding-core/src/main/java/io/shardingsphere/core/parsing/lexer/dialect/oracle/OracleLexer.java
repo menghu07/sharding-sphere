@@ -33,7 +33,12 @@ public final class OracleLexer extends Lexer {
     public OracleLexer(final String input) {
         super(input, dictionary);
     }
-    
+
+    @Override
+    protected boolean isNoOrder() {
+        return '/' == getCurrentChar(0) && '*' == getCurrentChar(1) && '-' == getCurrentChar(2);
+    }
+
     @Override
     protected boolean isHintBegin() {
         return '/' == getCurrentChar(0) && '*' == getCurrentChar(1) && '+' == getCurrentChar(2);

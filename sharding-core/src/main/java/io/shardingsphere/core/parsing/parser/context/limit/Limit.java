@@ -89,7 +89,7 @@ public final class Limit {
             throw new SQLParsingException("LIMIT offset and row count can not be a negative value.");
         }
     }
-    
+
     private void rewrite(final List<Object> parameters, final boolean isFetchAll) {
         int rewriteOffset = 0;
         int rewriteRowCount;

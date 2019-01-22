@@ -22,6 +22,8 @@ import io.shardingsphere.core.merger.dql.common.DecoratorMergedResult;
 import io.shardingsphere.core.parsing.parser.context.limit.Limit;
 
 import java.sql.SQLException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 /**
  * Decorator merged result for rownum pagination.
@@ -39,7 +41,10 @@ public final class RowNumberDecoratorMergedResult extends DecoratorMergedResult 
     public RowNumberDecoratorMergedResult(final MergedResult mergedResult, final Limit limit) throws SQLException {
         super(mergedResult);
         this.limit = limit;
+        System.out.println("skip begin: ");
+        long begin = System.currentTimeMillis();
         skipAll = skipOffset();
+        System.out.println(new SimpleDateFormat("yyyy-MM-dd hh:mm:ss.SSS").format(new Date()) + " use time: " + (System.currentTimeMillis() - begin) / 1000.0 + "s");
     }
     
     private boolean skipOffset() throws SQLException {

@@ -69,6 +69,17 @@ public class Condition {
         this(column, ShardingOperator.EQUAL);
         init(sqlExpression, 0);
     }
+
+    /**
+     * 指定类型操作符&lt; &lt;= &gt; &gt;=
+     * @param column 列
+     * @param operator 操作符
+     * @param sqlExpression 表达式
+     */
+    public Condition(final Column column, final ShardingOperator operator, final SQLExpression sqlExpression) {
+        this(column, operator);
+        init(sqlExpression, 0);
+    }
     
     public Condition(final Column column, final SQLExpression beginSQLExpression, final SQLExpression endSQLExpression) {
         this(column, ShardingOperator.BETWEEN);

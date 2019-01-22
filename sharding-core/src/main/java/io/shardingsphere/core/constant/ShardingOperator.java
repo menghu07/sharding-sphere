@@ -31,7 +31,13 @@ public enum ShardingOperator {
     
     EQUAL("="), 
     BETWEEN("BETWEEN"), 
-    IN("IN");
+    IN("IN"),
+
+    //新增分片操作符
+    LT("<"),
+    LT_EQ("<="),
+    GT(">"),
+    GT_EQ(">=");
     
     private final String expression;
 }

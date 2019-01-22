@@ -49,6 +49,7 @@ public final class OracleSelectParser extends AbstractSelectParser {
     
     @Override
     protected void parseInternal(final SelectStatement selectStatement) {
+        parseNoOrder(selectStatement);
         parseDistinct();
         parseSelectList(selectStatement, getItems());
         parseFrom(selectStatement);
@@ -61,7 +62,7 @@ public final class OracleSelectParser extends AbstractSelectParser {
         parseFor(selectStatement);
         parseSelectRest();
     }
-    
+
     private void parseHierarchicalQueryClause() {
         hierarchicalQueryClauseParser.parse();
     }

@@ -37,6 +37,8 @@ public final class Tokenizer {
     private static final int COMMENT_BEGIN_SYMBOL_LENGTH = 2;
     
     private static final int HINT_BEGIN_SYMBOL_LENGTH = 3;
+
+    private static final int NOORDER_BEGIN_SYMBOL_LENGTH = 3;
     
     private static final int COMMENT_AND_HINT_END_SYMBOL_LENGTH = 2;
     
@@ -122,7 +124,23 @@ public final class Tokenizer {
     private boolean isMultipleLineCommentEnd(final char ch, final char next) {
         return '*' == ch && '/' == next;
     }
-    
+
+    /**
+     * 按表顺序查询当查询时
+     * @return 扫描无序标识符
+     */
+    public Token scanNoOrder() {
+        int length = NOORDER_BEGIN_SYMBOL_LENGTH;
+        while (!isMultipleLineCommentEnd(charAt(offset + length), charAt(offset + length + 1))) {
+            if (CharType.isEndOfInput(charAt(offset + length))) {
+                throw new UnterminatedCharException("*/");
+            }
+            length++;
+        }
+        return new Token(Literals.NOORDER, input.substring(offset, offset + length + COMMENT_AND_HINT_END_SYMBOL_LENGTH),
+                offset + length + COMMENT_AND_HINT_END_SYMBOL_LENGTH);
+    }
+
     /**
      * scan variable.
      *

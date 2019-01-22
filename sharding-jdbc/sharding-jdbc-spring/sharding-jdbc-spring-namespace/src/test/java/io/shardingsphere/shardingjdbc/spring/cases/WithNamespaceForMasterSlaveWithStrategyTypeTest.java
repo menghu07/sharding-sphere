@@ -28,7 +28,7 @@ public final class WithNamespaceForMasterSlaveWithStrategyTypeTest extends Abstr
     
     @Override
     protected List<String> getSchemaFiles() {
-        return Arrays.asList("schema/dbtbl_0_master.sql", "schema/dbtbl_0_slave_0.sql", "schema/dbtbl_0_slave_1.sql",
-                "schema/dbtbl_1_master.sql", "schema/dbtbl_1_slave_0.sql", "schema/dbtbl_1_slave_1.sql");
+        return Arrays.asList("config/schema/dbtbl_0_master.sql", "config/schema/dbtbl_0_slave_0.sql", "config/schema/dbtbl_0_slave_1.sql",
+                "config/schema/dbtbl_1_master.sql", "config/schema/dbtbl_1_slave_0.sql", "config/schema/dbtbl_1_slave_1.sql");
     }
 }

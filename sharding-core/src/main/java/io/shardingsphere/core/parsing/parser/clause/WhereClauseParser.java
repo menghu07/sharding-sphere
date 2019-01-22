@@ -19,10 +19,12 @@ package io.shardingsphere.core.parsing.parser.clause;
 
 import com.google.common.base.Optional;
 import io.shardingsphere.core.constant.DatabaseType;
+import io.shardingsphere.core.constant.ShardingOperator;
 import io.shardingsphere.core.parsing.lexer.LexerEngine;
 import io.shardingsphere.core.parsing.lexer.token.DefaultKeyword;
 import io.shardingsphere.core.parsing.lexer.token.Keyword;
 import io.shardingsphere.core.parsing.lexer.token.Symbol;
+import io.shardingsphere.core.parsing.lexer.token.TokenType;
 import io.shardingsphere.core.parsing.parser.clause.condition.NullCondition;
 import io.shardingsphere.core.parsing.parser.clause.expression.AliasExpressionParser;
 import io.shardingsphere.core.parsing.parser.clause.expression.BasicExpressionParser;
@@ -36,6 +38,7 @@ import io.shardingsphere.core.parsing.parser.context.selectitem.SelectItem;
 import io.shardingsphere.core.parsing.parser.context.table.Table;
 import io.shardingsphere.core.parsing.parser.context.table.Tables;
 import io.shardingsphere.core.parsing.parser.dialect.ExpressionParserFactory;
+import io.shardingsphere.core.parsing.parser.exception.SQLParsingException;
 import io.shardingsphere.core.parsing.parser.expression.SQLExpression;
 import io.shardingsphere.core.parsing.parser.expression.SQLIdentifierExpression;
 import io.shardingsphere.core.parsing.parser.expression.SQLNumberExpression;
@@ -89,7 +92,13 @@ public abstract class WhereClauseParser implements SQLClauseParser {
             parseWhere(shardingRule, sqlStatement, items);
         }
     }
-    
+
+    /**
+     * 只解析关心的where条件
+     * @param shardingRule
+     * @param sqlStatement
+     * @param items
+     */
     private void parseWhere(final ShardingRule shardingRule, final SQLStatement sqlStatement, final List<SelectItem> items) {
         OrCondition orCondition = parseOr(shardingRule, sqlStatement, items).optimize();
         if (1 != orCondition.getAndConditions().size() || !(orCondition.getAndConditions().get(0).getConditions().get(0) instanceof NullCondition)) {
@@ -193,9 +202,15 @@ public abstract class WhereClauseParser implements SQLClauseParser {
                 return result;
             }
         }
+        TokenType currentTokenType = lexerEngine.getCurrentToken().getType();
+        //此处添加<、<=、>、>=分表字段
+        if (lexerEngine.skipIfEqual(Symbol.LT, Symbol.LT_EQ, Symbol.GT, Symbol.GT_EQ) ) {
+            result = parseLessAndGreatCondition(shardingRule, sqlStatement, left, currentTokenType);
+            return result;
+        }
         List<Keyword> otherConditionOperators = new LinkedList<>(Arrays.asList(getCustomizedOtherConditionOperators()));
         otherConditionOperators.addAll(
-                Arrays.asList(Symbol.LT, Symbol.LT_EQ, Symbol.GT, Symbol.GT_EQ, Symbol.LT_GT, Symbol.BANG_EQ, Symbol.BANG_GT, Symbol.BANG_LT, DefaultKeyword.LIKE, DefaultKeyword.IS));
+                Arrays.asList(Symbol.LT_GT, Symbol.BANG_EQ, Symbol.BANG_GT, Symbol.BANG_LT, DefaultKeyword.LIKE, DefaultKeyword.IS));
         if (lexerEngine.skipIfEqual(otherConditionOperators.toArray(new Keyword[otherConditionOperators.size()]))) {
             lexerEngine.skipIfEqual(DefaultKeyword.NOT);
             parseOtherCondition(sqlStatement);
@@ -268,6 +283,37 @@ public abstract class WhereClauseParser implements SQLClauseParser {
             Optional<Column> column = find(sqlStatement.getTables(), left);
             if (column.isPresent() && shardingRule.isShardingColumn(column.get())) {
                 return new Condition(column.get(), rights.get(0), rights.get(1));
+            }
+        }
+        return new NullCondition();
+    }
+
+    /**
+     * 处理分表字段<、<=、>、>=比较操作符
+     * @param shardingRule
+     * @param sqlStatement
+     * @param left
+     * @return
+     */
+    private Condition parseLessAndGreatCondition(final ShardingRule shardingRule, final SQLStatement sqlStatement, final SQLExpression left,
+                                                 final TokenType tokenType) {
+        SQLExpression right = basicExpressionParser.parse(sqlStatement);
+        if (!sqlStatement.getTables().isSingleTable() && !(left instanceof SQLPropertyExpression)) {
+            return new NullCondition();
+        }
+        if (right instanceof SQLNumberExpression || right instanceof SQLTextExpression || right instanceof SQLPlaceholderExpression) {
+            Optional<Column> column = find(sqlStatement.getTables(), left);
+            if (column.isPresent() && shardingRule.isShardingColumn(column.get())) {
+                if (tokenType == Symbol.LT) {
+                    return new Condition(column.get(), ShardingOperator.LT, right);
+                } else if (tokenType == Symbol.LT_EQ) {
+                    return new Condition(column.get(), ShardingOperator.LT_EQ, right);
+                } else if (tokenType == Symbol.GT) {
+                    return new Condition(column.get(), ShardingOperator.GT, right);
+                } else if (tokenType == Symbol.GT_EQ) {
+                    return new Condition(column.get(), ShardingOperator.GT_EQ, right);
+                }
+                throw new SQLParsingException(lexerEngine);
             }
         }
         return new NullCondition();

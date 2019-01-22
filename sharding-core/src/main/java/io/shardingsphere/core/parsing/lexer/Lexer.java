@@ -28,28 +28,30 @@ import lombok.RequiredArgsConstructor;
 
 /**
  * Lexical analysis.
- * 
- * @author zhangliang 
+ *
+ * @author zhangliang
  */
 @RequiredArgsConstructor
 public class Lexer {
-    
+
     @Getter
     private final String input;
-    
+
     private final Dictionary dictionary;
-    
+
     private int offset;
-    
+
     @Getter
     private Token currentToken;
-    
+
     /**
      * Analyse next token.
      */
     public final void nextToken() {
         skipIgnoredToken();
-        if (isVariableBegin()) {
+        if (isNoOrder()) {
+            currentToken = new Tokenizer(input, dictionary, offset).scanNoOrder();
+        } else if (isVariableBegin()) {
             currentToken = new Tokenizer(input, dictionary, offset).scanVariable();
         } else if (isNCharBegin()) {
             currentToken = new Tokenizer(input, dictionary, ++offset).scanChars();
@@ -70,7 +72,7 @@ public class Lexer {
         }
         offset = currentToken.getEndPosition();
     }
-    
+
     private void skipIgnoredToken() {
         offset = new Tokenizer(input, dictionary, offset).skipWhitespace();
         while (isHintBegin()) {
@@ -82,58 +84,69 @@ public class Lexer {
             offset = new Tokenizer(input, dictionary, offset).skipWhitespace();
         }
     }
-    
+
     protected boolean isHintBegin() {
         return false;
     }
-    
+
     protected boolean isCommentBegin() {
         char current = getCurrentChar(0);
         char next = getCurrentChar(1);
-        return '/' == current && '/' == next || '-' == current && '-' == next || '/' == current && '*' == next;
+        //用作特殊处理 /*- NOORDER */
+        char third = getCurrentChar(2);
+        return '/' == current && '/' == next || '-' == current && '-' == next || ('/' == current && '*' == next && third != '-');
     }
-    
+
+    /**
+     * /*- *\/
+     *
+     * @return 是否无序标识
+     */
+    protected boolean isNoOrder() {
+        return '/' == getCurrentChar(0) && '*' == getCurrentChar(1) && '-' == getCurrentChar(2);
+    }
+
     protected boolean isVariableBegin() {
         return false;
     }
-    
+
     protected boolean isSupportNChars() {
         return false;
     }
-    
+
     private boolean isNCharBegin() {
         return isSupportNChars() && 'N' == getCurrentChar(0) && '\'' == getCurrentChar(1);
     }
-    
+
     private boolean isIdentifierBegin() {
         return isIdentifierBegin(getCurrentChar(0));
     }
-    
+
     protected boolean isIdentifierBegin(final char ch) {
         return CharType.isAlphabet(ch) || '`' == ch || '_' == ch || '$' == ch;
     }
-    
+
     private boolean isHexDecimalBegin() {
         return '0' == getCurrentChar(0) && 'x' == getCurrentChar(1);
     }
-    
+
     private boolean isNumberBegin() {
         return CharType.isDigital(getCurrentChar(0)) || ('.' == getCurrentChar(0) && CharType.isDigital(getCurrentChar(1)) && !isIdentifierBegin(getCurrentChar(-1))
                 || ('-' == getCurrentChar(0) && ('.' == getCurrentChar(1) || CharType.isDigital(getCurrentChar(1)))));
     }
-    
+
     private boolean isSymbolBegin() {
         return CharType.isSymbol(getCurrentChar(0));
     }
-    
+
     protected boolean isCharsBegin() {
         return '\'' == getCurrentChar(0) || '\"' == getCurrentChar(0);
     }
-    
+
     private boolean isEnd() {
         return offset >= input.length();
     }
-    
+
     protected final char getCurrentChar(final int offset) {
         return this.offset + offset >= input.length() ? (char) CharType.EOI : input.charAt(this.offset + offset);
     }

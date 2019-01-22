@@ -29,7 +29,7 @@ public enum SQLType {
      * 
      * <p>Such as {@code SELECT}.</p>
      */
-    DQL,
+     DQL,
     
     /**
      * Data Manipulation Language.

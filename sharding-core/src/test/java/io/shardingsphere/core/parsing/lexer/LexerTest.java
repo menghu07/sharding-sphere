@@ -150,10 +150,12 @@ public final class LexerTest {
         LexerAssert.assertNextToken(lexer, Symbol.STAR, "*");
         LexerAssert.assertNextToken(lexer, DefaultKeyword.FROM, "FROM");
         LexerAssert.assertNextToken(lexer, Literals.IDENTIFIER, "XXX_TABLE");
+        LexerAssert.assertNextToken(lexer, Literals.NOORDER, "/*--xyz \n WHERE XX=1 //xyz*/");
         LexerAssert.assertNextToken(lexer, DefaultKeyword.WHERE, "WHERE");
         LexerAssert.assertNextToken(lexer, Literals.IDENTIFIER, "YY");
         LexerAssert.assertNextToken(lexer, Symbol.GT, ">");
         LexerAssert.assertNextToken(lexer, Literals.INT, "2");
+        LexerAssert.assertNextToken(lexer, Literals.NOORDER, "/*--xyz //xyz*/");
         LexerAssert.assertNextToken(lexer, Assist.END, "");
     }
     
