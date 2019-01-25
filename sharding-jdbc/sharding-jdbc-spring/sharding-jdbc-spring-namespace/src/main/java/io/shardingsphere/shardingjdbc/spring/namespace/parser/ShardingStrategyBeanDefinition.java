@@ -64,6 +64,10 @@ public final class ShardingStrategyBeanDefinition {
         if (!Strings.isNullOrEmpty(element.getAttribute(ShardingStrategyBeanDefinitionParserTag.RANGE_ALGORITHM_REF_ATTRIBUTE))) {
             factory.addConstructorArgReference(element.getAttribute(ShardingStrategyBeanDefinitionParserTag.RANGE_ALGORITHM_REF_ATTRIBUTE));
         }
+        if (!Strings.isNullOrEmpty(element.getAttribute(ShardingStrategyBeanDefinitionParserTag.SUB_SHARDING_COLUMN_ATTRIBUTE))) {
+            factory.addPropertyValue("subShardingColumn",
+                    element.getAttribute(ShardingStrategyBeanDefinitionParserTag.SUB_SHARDING_COLUMN_ATTRIBUTE));
+        }
         return factory.getBeanDefinition();
     }
     

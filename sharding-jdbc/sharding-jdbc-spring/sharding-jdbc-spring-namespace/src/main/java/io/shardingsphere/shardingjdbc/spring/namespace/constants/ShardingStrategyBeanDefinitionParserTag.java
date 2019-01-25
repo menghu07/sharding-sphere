@@ -39,6 +39,9 @@ public final class ShardingStrategyBeanDefinitionParserTag {
     public static final String NONE_STRATEGY_ROOT_TAG = "none-strategy";
     
     public static final String SHARDING_COLUMN_ATTRIBUTE = "sharding-column";
+
+    //子分表列，与分表列存在某种关系
+    public static final String SUB_SHARDING_COLUMN_ATTRIBUTE = "subsharding-column";
     
     public static final String SHARDING_COLUMNS_ATTRIBUTE = "sharding-columns";
     

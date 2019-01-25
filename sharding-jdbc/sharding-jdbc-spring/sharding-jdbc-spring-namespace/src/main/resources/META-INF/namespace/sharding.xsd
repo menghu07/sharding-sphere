@@ -38,7 +38,11 @@
     </xsd:element>
     <xsd:element name="table-rule">
         <xsd:complexType>
+            <xsd:sequence>
+                <xsd:element ref="standard-strategy" minOccurs="0" maxOccurs="unbounded"/>
+            </xsd:sequence>
             <xsd:attribute name="logic-table" type="xsd:string" use="required" />
+            <xsd:attribute name="per-month-tables" type="xsd:positiveInteger" use="required"/>
             <xsd:attribute name="actual-data-nodes" type="xsd:string" />
             <xsd:attribute name="database-strategy-ref" type="xsd:string" />
             <xsd:attribute name="table-strategy-ref" type="xsd:string" />

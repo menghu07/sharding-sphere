@@ -102,15 +102,25 @@ public final class StandardRoutingEngine implements RoutingEngine {
             result.addAll(route(tableRule, Collections.<ShardingValue>emptyList(), Collections.<ShardingValue>emptyList()));
         } else {
             ShardingStrategy dataBaseShardingStrategy = shardingRule.getDatabaseShardingStrategy(tableRule);
-            ShardingStrategy tableShardingStrategy = shardingRule.getTableShardingStrategy(tableRule);
+            List<ShardingStrategy> tableShardingStrategies = shardingRule.getTableShardingStrategies(tableRule);
             for (ShardingCondition each : shardingConditions.getShardingConditions()) {
-                List<ShardingValue> databaseShardingValues = isGettingShardingValuesFromHint(dataBaseShardingStrategy)
-                        ? getDatabaseShardingValuesFromHint() : getShardingValues(dataBaseShardingStrategy.getShardingColumns(), each);
-                List<ShardingValue> tableShardingValues = isGettingShardingValuesFromHint(tableShardingStrategy)
-                        ? getTableShardingValuesFromHint() : getShardingValues(tableShardingStrategy.getShardingColumns(), each);
-                Collection<DataNode> dataNodes = route(tableRule, databaseShardingValues, tableShardingValues);
-                reviseShardingConditions(each, dataNodes);
-                result.addAll(dataNodes);
+                boolean isRouted = false;
+                for (ShardingStrategy tableShardingStrategy : tableShardingStrategies) {
+                    //只路由一次
+                    if (isRouted) {
+                        break;
+                    }
+                    List<ShardingValue> databaseShardingValues = isGettingShardingValuesFromHint(dataBaseShardingStrategy)
+                            ? getDatabaseShardingValuesFromHint() : getShardingValues(dataBaseShardingStrategy.getShardingColumns(), each);
+                    List<ShardingValue> tableShardingValues = isGettingShardingValuesFromHint(tableShardingStrategy)
+                            ? getTableShardingValuesFromHint() : getShardingValues(tableShardingStrategy.getShardingColumns(), each);
+                    if (!(tableShardingValues.isEmpty() && databaseShardingValues.isEmpty())) {
+                        Collection<DataNode> dataNodes = route(tableRule, databaseShardingValues, tableShardingValues);
+                        reviseShardingConditions(each, dataNodes);
+                        result.addAll(dataNodes);
+                        isRouted = true;
+                    }
+                }
             }
         }
         return result;

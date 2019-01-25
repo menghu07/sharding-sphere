@@ -19,6 +19,7 @@ package io.shardingsphere.core.rule;
 
 import com.google.common.base.Preconditions;
 import io.shardingsphere.api.config.TableRuleConfiguration;
+import io.shardingsphere.api.config.strategy.ShardingStrategyConfiguration;
 import io.shardingsphere.core.exception.ShardingException;
 import io.shardingsphere.core.keygen.KeyGenerator;
 import io.shardingsphere.core.routing.strategy.ShardingStrategy;
@@ -28,14 +29,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.ToString;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.regex.Pattern;
 
 /**
  * Table rule configuration.
@@ -45,11 +40,21 @@ import java.util.Map;
 @Getter
 @ToString(exclude = "dataNodeIndexMap")
 public final class TableRule {
-    
+
+    //分表正则表达式
+    private static final String SPLITTABLE_PATTERN = "^\\w+\\d+$";
+
     private final String logicTable;
-    
+
+    private final int perMonthTables;
+
+    /**
+     * 子分表策略配置
+     */
+    private final List<ShardingStrategy> subTableShardingStrategies;
+
     private final List<DataNode> actualDataNodes;
-    
+
     @Getter(AccessLevel.NONE)
     private final Map<DataNode, Integer> dataNodeIndexMap;
     
@@ -66,6 +71,8 @@ public final class TableRule {
     public TableRule(final String defaultDataSourceName, final String logicTableName) {
         logicTable = logicTableName.toLowerCase();
         actualDataNodes = Collections.singletonList(new DataNode(defaultDataSourceName, logicTableName));
+        perMonthTables = 0;
+        subTableShardingStrategies = Collections.emptyList();
         dataNodeIndexMap = Collections.emptyMap();
         databaseShardingStrategy = null;
         tableShardingStrategy = null;
@@ -76,7 +83,10 @@ public final class TableRule {
     
     public TableRule(final TableRuleConfiguration tableRuleConfig, final ShardingDataSourceNames shardingDataSourceNames) {
         Preconditions.checkNotNull(tableRuleConfig.getLogicTable(), "Logic table cannot be null.");
+        Preconditions.checkArgument(!shardingDataSourceNames.getDataSourceNames().isEmpty(), "数据源不能为空");
         logicTable = tableRuleConfig.getLogicTable().toLowerCase();
+        perMonthTables = tableRuleConfig.getPerMonthTables();
+        subTableShardingStrategies = newShardingStrategies(tableRuleConfig.getSubTableShardingStrategyConfigs());
         List<String> dataNodes = new InlineExpressionParser(tableRuleConfig.getActualDataNodes()).splitAndEvaluate();
         dataNodeIndexMap = new HashMap<>(dataNodes.size(), 1);
         actualDataNodes = isEmptyDataNodes(dataNodes)
@@ -107,6 +117,11 @@ public final class TableRule {
     private List<DataNode> generateDataNodes(final List<String> actualDataNodes, final Collection<String> dataSourceNames) {
         List<DataNode> result = new LinkedList<>();
         int index = 0;
+        //在此校验数据分表个数和实际配置个数是否一致
+        String exampleDataSourceName = dataSourceNames.iterator().next();
+        //格式为table180000, table180001 ... table180107
+        Map<String, Integer> monthTables = new HashMap<>();
+        int maxNumberOfTable = -1;
         for (String each : actualDataNodes) {
             DataNode dataNode = new DataNode(each);
             if (!dataSourceNames.contains(dataNode.getDataSourceName())) {
@@ -115,7 +130,22 @@ public final class TableRule {
             result.add(dataNode);
             dataNodeIndexMap.put(dataNode, index);
             index++;
+            //做分表配置验证使用
+            if (Pattern.matches(SPLITTABLE_PATTERN, dataNode.getTableName())
+                    && exampleDataSourceName.equalsIgnoreCase(dataNode.getDataSourceName())) {
+                String numbers4 = first4Numbers(dataNode.getTableName());
+                Integer oldValue = monthTables.get(numbers4);
+                if (oldValue == null) {
+                    monthTables.put(numbers4, oldValue = 1);
+                } else {
+                    monthTables.put(numbers4, ++oldValue);
+                }
+                if (oldValue > maxNumberOfTable) {
+                    maxNumberOfTable = oldValue;
+                }
+            }
         }
+        Preconditions.checkArgument(maxNumberOfTable == perMonthTables, "每个月分表个数和分表表达式不一致,TableName=" + logicTable);
         return result;
     }
     
@@ -177,5 +207,73 @@ public final class TableRule {
             }
         }
         return false;
+    }
+
+    /**
+     * 返回前4个字符组成的字符串
+     * @param tableName
+     * @return
+     */
+    private String first4Numbers(String tableName) {
+        StringBuilder builder = new StringBuilder();
+        int i = 0;
+        for (char c : tableName.toCharArray()) {
+            if (i < 4 && '0' <= c && c <= '9') {
+                 builder.append(c);
+                 i++;
+            }
+            if (i == 4) {
+                break;
+            }
+        }
+        return builder.toString();
+    }
+
+    /**
+     * 创建子分表字段分表策略
+     * @param shardingStrategyConfigurations
+     * @return
+     */
+    private List<ShardingStrategy> newShardingStrategies(List<ShardingStrategyConfiguration> shardingStrategyConfigurations) {
+        if (shardingStrategyConfigurations == null || shardingStrategyConfigurations.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<ShardingStrategy> result = new ArrayList<>();
+        for (ShardingStrategyConfiguration configuration : shardingStrategyConfigurations) {
+            result.add( ShardingStrategyFactory.newInstance(configuration));
+        }
+        return result;
+    }
+
+    /**
+     * 是否是分片列
+     * @param columnName
+     * @return
+     */
+    public boolean isShardingColumn(String columnName) {
+        if (null != databaseShardingStrategy && databaseShardingStrategy.getShardingColumns().contains(columnName)) {
+            return true;
+        }
+        if (null != tableShardingStrategy && tableShardingStrategy.getShardingColumns().contains(columnName)) {
+            return true;
+        }
+        for (ShardingStrategy shardingStrategy : subTableShardingStrategies) {
+            if (shardingStrategy.getShardingColumns().contains(columnName)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 获取所有分表策略
+     * @return
+     */
+    public List<ShardingStrategy> getTableShardingStrategies() {
+        List<ShardingStrategy> result = new ArrayList<>(subTableShardingStrategies);
+        if (tableShardingStrategy != null) {
+            result.add(0, tableShardingStrategy);
+        }
+        return result;
     }
 }

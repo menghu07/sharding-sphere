@@ -23,9 +23,11 @@ import io.shardingsphere.api.algorithm.masterslave.MasterSlaveLoadBalanceAlgorit
 import io.shardingsphere.api.config.MasterSlaveRuleConfiguration;
 import io.shardingsphere.api.config.ShardingRuleConfiguration;
 import io.shardingsphere.api.config.TableRuleConfiguration;
+import io.shardingsphere.api.config.strategy.StandardShardingStrategyConfiguration;
 import io.shardingsphere.shardingjdbc.spring.datasource.SpringShardingDataSource;
 import io.shardingsphere.shardingjdbc.spring.namespace.constants.MasterSlaveDataSourceBeanDefinitionParserTag;
 import io.shardingsphere.shardingjdbc.spring.namespace.constants.ShardingDataSourceBeanDefinitionParserTag;
+import io.shardingsphere.shardingjdbc.spring.namespace.constants.ShardingStrategyBeanDefinitionParserTag;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.RuntimeBeanReference;
 import org.springframework.beans.factory.support.AbstractBeanDefinition;
@@ -55,7 +57,7 @@ public final class ShardingDataSourceBeanDefinitionParser extends AbstractBeanDe
     protected AbstractBeanDefinition parseInternal(final Element element, final ParserContext parserContext) {
         BeanDefinitionBuilder factory = BeanDefinitionBuilder.rootBeanDefinition(SpringShardingDataSource.class);
         factory.addConstructorArgValue(parseDataSources(element));
-        factory.addConstructorArgValue(parseShardingRuleConfig(element));
+        factory.addConstructorArgValue(parseShardingRuleConfig(element, parserContext));
         factory.addConstructorArgValue(parseConfigMap(element, parserContext, factory.getBeanDefinition()));
         factory.addConstructorArgValue(parseProperties(element, parserContext));
         factory.setDestroyMethodName("close");
@@ -72,13 +74,13 @@ public final class ShardingDataSourceBeanDefinitionParser extends AbstractBeanDe
         return result;
     }
     
-    private BeanDefinition parseShardingRuleConfig(final Element element) {
+    private BeanDefinition parseShardingRuleConfig(final Element element, final ParserContext parserContext) {
         Element shardingRuleElement = DomUtils.getChildElementByTagName(element, ShardingDataSourceBeanDefinitionParserTag.SHARDING_RULE_CONFIG_TAG);
         BeanDefinitionBuilder factory = BeanDefinitionBuilder.rootBeanDefinition(ShardingRuleConfiguration.class);
         parseDefaultDataSource(factory, shardingRuleElement);
         parseDefaultDatabaseShardingStrategy(factory, shardingRuleElement);
         parseDefaultTableShardingStrategy(factory, shardingRuleElement);
-        factory.addPropertyValue("tableRuleConfigs", parseTableRulesConfig(shardingRuleElement));
+        factory.addPropertyValue("tableRuleConfigs", parseTableRulesConfig(shardingRuleElement, parserContext));
         factory.addPropertyValue("masterSlaveRuleConfigs", parseMasterSlaveRulesConfig(shardingRuleElement));
         factory.addPropertyValue("bindingTableGroups", parseBindingTablesConfig(shardingRuleElement));
         parseKeyGenerator(factory, shardingRuleElement);
@@ -152,19 +154,23 @@ public final class ShardingDataSourceBeanDefinitionParser extends AbstractBeanDe
         return result;
     }
     
-    private List<BeanDefinition> parseTableRulesConfig(final Element element) {
+    private List<BeanDefinition> parseTableRulesConfig(final Element element, final ParserContext parserContext) {
         Element tableRulesElement = DomUtils.getChildElementByTagName(element, ShardingDataSourceBeanDefinitionParserTag.TABLE_RULES_TAG);
         List<Element> tableRuleElements = DomUtils.getChildElementsByTagName(tableRulesElement, ShardingDataSourceBeanDefinitionParserTag.TABLE_RULE_TAG);
         List<BeanDefinition> result = new ManagedList<>(tableRuleElements.size());
         for (Element each : tableRuleElements) {
-            result.add(parseTableRuleConfig(each));
+            result.add(parseTableRuleConfig(each, parserContext));
         }
         return result;
     }
     
-    private BeanDefinition parseTableRuleConfig(final Element tableElement) {
+    private BeanDefinition parseTableRuleConfig(final Element tableElement, ParserContext parserContext) {
         BeanDefinitionBuilder factory = BeanDefinitionBuilder.rootBeanDefinition(TableRuleConfiguration.class);
         factory.addPropertyValue("logicTable", tableElement.getAttribute(ShardingDataSourceBeanDefinitionParserTag.LOGIC_TABLE_ATTRIBUTE));
+        //添加每月分表个数
+        factory.addPropertyValue("perMonthTables", tableElement.getAttribute(ShardingDataSourceBeanDefinitionParserTag.PER_MONTH_TABLES_ATTRIBUTE));
+        //子分表策略配置
+        factory.addPropertyValue("subTableShardingStrategyConfigs", parseSubShardingStrategy(tableElement, parserContext, factory.getRawBeanDefinition()));
         String actualDataNodes = tableElement.getAttribute(ShardingDataSourceBeanDefinitionParserTag.ACTUAL_DATA_NODES_ATTRIBUTE);
         if (!Strings.isNullOrEmpty(actualDataNodes)) {
             factory.addPropertyValue("actualDataNodes", actualDataNodes);
@@ -213,5 +219,19 @@ public final class ShardingDataSourceBeanDefinitionParser extends AbstractBeanDe
     private Properties parseProperties(final Element element, final ParserContext parserContext) {
         Element propsElement = DomUtils.getChildElementByTagName(element, ShardingDataSourceBeanDefinitionParserTag.PROPS_TAG);
         return null == propsElement ? new Properties() : parserContext.getDelegate().parsePropsElement(propsElement);
+    }
+
+    /**
+     * 获取子分表字段分片策略
+     * @param element
+     * @return
+     */
+    private List<BeanDefinition> parseSubShardingStrategy(final Element element, final ParserContext parserContext, BeanDefinition containingBeanDefinition) {
+        List<Element> subShardingStrategyElements = DomUtils.getChildElementsByTagName(element, ShardingStrategyBeanDefinitionParserTag.STANDARD_STRATEGY_ROOT_TAG);
+        List<BeanDefinition> result = new ManagedList<>(subShardingStrategyElements.size());
+        for (Element each : subShardingStrategyElements) {
+            result.add((parserContext.getDelegate().parseCustomElement(each, containingBeanDefinition)));
+        }
+        return result;
     }
 }

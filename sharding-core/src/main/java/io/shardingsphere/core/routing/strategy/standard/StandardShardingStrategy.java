@@ -18,6 +18,7 @@
 package io.shardingsphere.core.routing.strategy.standard;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import io.shardingsphere.api.algorithm.sharding.ListShardingValue;
 import io.shardingsphere.api.algorithm.sharding.PreciseShardingValue;
 import io.shardingsphere.api.algorithm.sharding.RangeShardingValue;
@@ -41,7 +42,7 @@ import java.util.TreeSet;
 public final class StandardShardingStrategy implements ShardingStrategy {
     
     private final String shardingColumn;
-    
+
     private final PreciseShardingAlgorithm preciseShardingAlgorithm;
     
     private final RangeShardingAlgorithm rangeShardingAlgorithm;

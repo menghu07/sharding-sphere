@@ -19,23 +19,32 @@ package io.shardingsphere.api.config.strategy;
 
 import io.shardingsphere.api.algorithm.sharding.standard.PreciseShardingAlgorithm;
 import io.shardingsphere.api.algorithm.sharding.standard.RangeShardingAlgorithm;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 
 /**
  * Standard strategy configuration.
  * 
  * @author zhangliang
  */
-@AllArgsConstructor
-@RequiredArgsConstructor
 @Getter
+@Setter
 public final class StandardShardingStrategyConfiguration implements ShardingStrategyConfiguration {
     
     private final String shardingColumn;
-    
+
     private final PreciseShardingAlgorithm preciseShardingAlgorithm;
-    
+
     private RangeShardingAlgorithm rangeShardingAlgorithm;
+
+    public StandardShardingStrategyConfiguration(String shardingColumn, PreciseShardingAlgorithm preciseShardingAlgorithm) {
+        this.shardingColumn = shardingColumn;
+        this.preciseShardingAlgorithm = preciseShardingAlgorithm;
+    }
+
+    public StandardShardingStrategyConfiguration(String shardingColumn, PreciseShardingAlgorithm preciseShardingAlgorithm, RangeShardingAlgorithm rangeShardingAlgorithm) {
+        this.shardingColumn = shardingColumn;
+        this.preciseShardingAlgorithm = preciseShardingAlgorithm;
+        this.rangeShardingAlgorithm = rangeShardingAlgorithm;
+    }
 }

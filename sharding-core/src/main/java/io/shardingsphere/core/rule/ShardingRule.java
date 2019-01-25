@@ -28,16 +28,14 @@ import io.shardingsphere.core.exception.ShardingException;
 import io.shardingsphere.core.keygen.DefaultKeyGenerator;
 import io.shardingsphere.core.keygen.KeyGenerator;
 import io.shardingsphere.core.parsing.parser.context.condition.Column;
+import io.shardingsphere.core.parsing.parser.context.table.Table;
 import io.shardingsphere.core.routing.strategy.ShardingStrategy;
 import io.shardingsphere.core.routing.strategy.ShardingStrategyFactory;
 import io.shardingsphere.core.routing.strategy.none.NoneShardingStrategy;
 import io.shardingsphere.core.util.StringUtil;
 import lombok.Getter;
 
-import java.util.Collection;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.TreeSet;
+import java.util.*;
 
 /**
  * Databases and tables sharding rule configuration.
@@ -164,6 +162,11 @@ public class ShardingRule {
     public ShardingStrategy getTableShardingStrategy(final TableRule tableRule) {
         return null == tableRule.getTableShardingStrategy() ? defaultTableShardingStrategy : tableRule.getTableShardingStrategy();
     }
+
+    public List<ShardingStrategy> getTableShardingStrategies(final TableRule tableRule) {
+        List<ShardingStrategy> tableShardingStrategies = tableRule.getTableShardingStrategies();
+        return tableShardingStrategies.isEmpty() ? Collections.singletonList(defaultTableShardingStrategy) : tableShardingStrategies;
+    }
     
     /**
      * Adjust logic tables is all belong to binding tables.
@@ -238,10 +241,7 @@ public class ShardingRule {
             if (!each.getLogicTable().equalsIgnoreCase(column.getTableName())) {
                 continue;
             }
-            if (null != each.getDatabaseShardingStrategy() && each.getDatabaseShardingStrategy().getShardingColumns().contains(column.getName())) {
-                return true;
-            }
-            if (null != each.getTableShardingStrategy() && each.getTableShardingStrategy().getShardingColumns().contains(column.getName())) {
+            if (each.isShardingColumn(column.getName())) {
                 return true;
             }
         }

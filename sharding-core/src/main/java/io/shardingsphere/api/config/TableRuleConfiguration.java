@@ -22,6 +22,9 @@ import io.shardingsphere.core.keygen.KeyGenerator;
 import lombok.Getter;
 import lombok.Setter;
 
+import javax.annotation.PostConstruct;
+import java.util.List;
+
 /**
  * Table rule configuration.
  * 
@@ -32,6 +35,16 @@ import lombok.Setter;
 public final class TableRuleConfiguration {
     
     private String logicTable;
+
+    /**
+     * 每个月分表个数
+     */
+    private int perMonthTables;
+
+    /**
+     * 子分表策略配置
+     */
+    private List<ShardingStrategyConfiguration> subTableShardingStrategyConfigs;
     
     private String actualDataNodes;
     

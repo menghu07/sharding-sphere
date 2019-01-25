@@ -53,6 +53,9 @@ public final class ShardingDataSourceBeanDefinitionParserTag {
     public static final String BINDING_TABLE_RULE_TAG = "binding-table-rule";
     
     public static final String LOGIC_TABLE_ATTRIBUTE = "logic-table";
+
+    //每月分表个数
+    public static final String PER_MONTH_TABLES_ATTRIBUTE = "per-month-tables";
     
     public static final String LOGIC_TABLES_ATTRIBUTE = "logic-tables";
     

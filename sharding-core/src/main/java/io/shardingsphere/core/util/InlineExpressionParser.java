@@ -71,7 +71,10 @@ public final class InlineExpressionParser {
         if (null == inlineExpression) {
             return Collections.emptyList();
         }
-        return flatten(evaluate(split()));
+        List<String> notSorted = flatten(evaluate(split()));
+        //把表名按升序排列
+        Collections.sort(notSorted);
+        return notSorted;
     }
     
     /**
